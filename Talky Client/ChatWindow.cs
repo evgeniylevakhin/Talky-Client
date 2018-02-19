@@ -1,12 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
-using System.Drawing;
-using System.Linq;
-using System.Text;
 using System.Threading;
-using System.Threading.Tasks;
 using System.Windows.Forms;
 using Talky_Client.Connection;
 
@@ -52,7 +45,8 @@ namespace Talky_Client
                 try
                 {
                     line = _connection.Reader.ReadLine();
-                } catch
+                }
+                catch
                 {
                     break;
                 }
@@ -66,79 +60,83 @@ namespace Talky_Client
                 {
                     ChatMessage theMessage = new ChatMessage(line.Substring(2));
 
-                    _messageLog.Invoke((MethodInvoker) delegate
-                    {
-                        foreach (string piece in theMessage.Pieces.Keys)
-                        {
-                            _messageLog.SelectionColor = theMessage.Pieces[piece];
-                            _messageLog.AppendText(piece);
-                        }
-                        _messageLog.AppendText(Environment.NewLine);
-                    });
+                    _messageLog.Invoke((MethodInvoker)delegate
+                   {
+                       foreach (string piece in theMessage.Pieces.Keys)
+                       {
+                           _messageLog.SelectionColor = theMessage.Pieces[piece];
+                           _messageLog.AppendText(piece);
+                       }
+                       _messageLog.AppendText(Environment.NewLine);
+                   });
 
                     if (_connection.Client.Connected)
                     {
                         _connection.Writer.WriteLine("S:ChannelClientList");
                         _connection.Writer.Flush();
                     }
-                } else if (line.StartsWith("S:ChannelList:"))
+                }
+                else if (line.StartsWith("S:ChannelList:"))
                 {
-                    string[] channels = line.Substring(14).Split(new char[] { ';' });
+                    string[] channels = line.Substring(14).Split(';');
                     new ChannelList(channels).ShowDialog();
-                } else if (line.StartsWith("S:ChannelClientList:"))
+                }
+                else if (line.StartsWith("S:ChannelClientList:"))
                 {
-                    string[] clients = line.Substring(20).Split(new char[] { ';' });
-                    _clientListComboBox.Invoke((MethodInvoker) delegate
-                    {
-                        _clientListComboBox.Items.Clear();
-                        _clientListComboBox.Items.AddRange(clients);
-                    });
-                } else if (line.StartsWith("S:Client:"))
+                    string[] clients = line.Substring(20).Split(';');
+                    _clientListComboBox.Invoke((MethodInvoker)delegate
+                   {
+                       _clientListComboBox.Items.Clear();
+                       _clientListComboBox.Items.AddRange(clients);
+                   });
+                }
+                else if (line.StartsWith("S:Client:"))
                 {
                     string[] data = line.Substring(9).Split(new char[] { ';' });
                     string username = data[0];
                     string muted = data[1];
                     string channel = data[2];
 
-                    _titleLabel.Invoke((MethodInvoker) delegate
-                    {
-                        _titleLabel.Text = "[" + username + "] " + channel + " on " + _connection.Host + ":" + _connection.Port;
-                    });
+                    _titleLabel.Invoke((MethodInvoker)delegate
+                   {
+                       _titleLabel.Text = $@"[{username}]  {channel} on {_connection.Host}:{_connection.Port}";
+                   });
 
-                    Invoke((MethodInvoker) delegate
-                    {
-                        Text = "[" + username + "] " + channel + " on " + _connection.Host + ":" + _connection.Port;
-                    });
-                } else if (line.StartsWith("S:Account:"))
+                    Invoke((MethodInvoker)delegate
+                   {
+                       Text = $@"[{username}] {channel} on {_connection.Host}:{_connection.Port}";
+                   });
+                }
+                else if (line.StartsWith("S:Account:"))
                 {
                     string[] data = line.Substring(9).Split(new char[] { ';' });
                     string accountId = data[0];
                     string username = data[1];
                     string role = data[2];
 
-                    _accountLabel.Invoke((MethodInvoker) delegate
-                    {
-                        _accountLabel.Visible = true;
-                    });
+                    _accountLabel.Invoke((MethodInvoker)delegate
+                   {
+                       _accountLabel.Visible = true;
+                   });
 
-                    _accountUsernameLabel.Invoke((MethodInvoker) delegate
-                    {
-                        _accountUsernameLabel.Visible = true;
-                        _accountUsernameLabel.Text = username;
-                    });
+                    _accountUsernameLabel.Invoke((MethodInvoker)delegate
+                   {
+                       _accountUsernameLabel.Visible = true;
+                       _accountUsernameLabel.Text = username;
+                   });
 
-                    _accountRoleLabel.Invoke((MethodInvoker) delegate
-                    {
-                        _accountRoleLabel.Visible = true;
-                        _accountRoleLabel.Text = role;
-                    });
+                    _accountRoleLabel.Invoke((MethodInvoker)delegate
+                   {
+                       _accountRoleLabel.Visible = true;
+                       _accountRoleLabel.Text = role;
+                   });
 
                     _connection.Writer.WriteLine("S:ChannelClientList");
                     _connection.Writer.Flush();
                 }
             }
 
-            MessageBox.Show("Lost connection to Talky Chat Server!", "Connection Error");
+            MessageBox.Show(@"Lost connection to Talky Chat Server!", @"Connection Error");
             ConnectForm.Instance.Show();
             Close();
         }

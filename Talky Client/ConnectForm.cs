@@ -1,12 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
-using System.Drawing;
-using System.Linq;
-using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
 using System.Windows.Forms;
 using Talky_Client.Connection;
 
@@ -43,19 +35,19 @@ namespace Talky_Client
 
             if (string.IsNullOrEmpty(host) || string.IsNullOrWhiteSpace(host))
             {
-                MessageBox.Show("Please correct the errors with the host field.", "Host");
+                MessageBox.Show(@"Please correct the errors with the host field.", @"Host");
                 return;
             }
 
             if (string.IsNullOrEmpty(_portInput.Text) || !validPort)
             {
-                MessageBox.Show("Please correct the errors with the port field.", "Port");
+                MessageBox.Show(@"Please correct the errors with the port field.", @"Port");
                 return;
             }
 
             if (!ValidUsername(username))
             {
-                MessageBox.Show("Please correct the errors with the username field.", "Username");
+                MessageBox.Show(@"Please correct the errors with the username field.", @"Username");
                 return;
             }
 
