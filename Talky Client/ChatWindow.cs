@@ -7,53 +7,49 @@ namespace Talky_Client
 {
     public partial class ChatWindow : Form
     {
+        private readonly ServerConnection _connection;
+        private Thread _listeningThread;
+        private bool _isRunning;
 
-        private ServerConnection _connection { get; set; }
-        private Thread _listeningThread { get; set; }
-
-        public ChatWindow()
+        public ChatWindow(ServerConnection conn)
         {
             InitializeComponent();
+            _connection = conn;
         }
 
         private void ChatWindow_Shown(object sender, EventArgs e)
         {
-            ServerConnection connection = ServerConnection.GetCurrentConnection();
-            if (connection == null || connection.Client == null || !connection.Client.Connected)
+            if (!_connection.IsConnected())
             {
-                MessageBox.Show("Could not connect to the Talky Chat Server!", "Connection Failure");
-                _listeningThread = null;
-                ServerConnection.SetCurrentConnection(null);
-                ConnectForm.Instance.Show();
-                Close();
+                MessageBox.Show(@"Could not connect to the Talky Chat Server!", @"Connection Failure");
+                Disconnect();
                 return;
             }
 
-            _connection = connection;
-
-            _listeningThread = new Thread(new ThreadStart(Listen));
-            _listeningThread.Name = "Message Listener Thread";
+            _listeningThread = new Thread(Listen) { Name = "Message Listener Thread" };
             _listeningThread.Start();
         }
 
         private void Listen()
         {
-            string line = null;
-
-            while (ServerConnection.GetCurrentConnection() != null && _connection.Client.Connected)
+            _isRunning = true;
+            while (_isRunning)
             {
-                try
-                {
-                    line = _connection.Reader.ReadLine();
-                }
-                catch
-                {
+                //move message processing into different function
+                string line = _connection.Read();
+
+                if (!_isRunning)
                     break;
+
+                if (!_connection.IsConnected())
+                {
+                    _connection.Connect();
+                    continue;
                 }
 
                 if (string.IsNullOrEmpty(line))
                 {
-                    break;
+                    continue;
                 }
 
                 if (line.StartsWith("M:"))
@@ -70,16 +66,15 @@ namespace Talky_Client
                        _messageLog.AppendText(Environment.NewLine);
                    });
 
-                    if (_connection.Client.Connected)
+                    if (_connection.IsConnected())
                     {
-                        _connection.Writer.WriteLine("S:ChannelClientList");
-                        _connection.Writer.Flush();
+                        _connection.Send("S:ChannelClientList");
                     }
                 }
                 else if (line.StartsWith("S:ChannelList:"))
                 {
                     string[] channels = line.Substring(14).Split(';');
-                    new ChannelList(channels).ShowDialog();
+                    new ChannelList(channels, _connection).ShowDialog();
                 }
                 else if (line.StartsWith("S:ChannelClientList:"))
                 {
@@ -92,7 +87,7 @@ namespace Talky_Client
                 }
                 else if (line.StartsWith("S:Client:"))
                 {
-                    string[] data = line.Substring(9).Split(new char[] { ';' });
+                    string[] data = line.Substring(9).Split(';');
                     string username = data[0];
                     string muted = data[1];
                     string channel = data[2];
@@ -131,39 +126,21 @@ namespace Talky_Client
                        _accountRoleLabel.Text = role;
                    });
 
-                    _connection.Writer.WriteLine("S:ChannelClientList");
-                    _connection.Writer.Flush();
+                    _connection.Send("S:ChannelClientList");
                 }
             }
-
-            MessageBox.Show(@"Lost connection to Talky Chat Server!", @"Connection Error");
-            ConnectForm.Instance.Show();
-            Close();
         }
 
         private void _channelsButton_Click(object sender, EventArgs e)
         {
-            _connection.Writer.WriteLine("S:ChannelList");
-            _connection.Writer.Flush();
-            _connection.Writer.WriteLine("S:ChannelClientList");
-            _connection.Writer.Flush();
+            _connection.Send("S:ChannelList");
+            _connection.Send("S:ChannelClientList");
         }
 
         private void ChatWindow_FormClosing(object sender, FormClosingEventArgs e)
         {
-            if (_connection != null && _connection.Client != null && _connection.Client.Connected)
-            {
-                _connection.Client.Close();
-            }
-
-            if (_listeningThread != null)
-            {
-                _listeningThread.Abort();
-            }
-
-            _listeningThread = null;
+            Disconnect();
             ConnectForm.Instance.Show();
-            ServerConnection.SetCurrentConnection(null);
 
             _accountLabel.Visible = true;
             _accountUsernameLabel.Visible = true;
@@ -177,26 +154,23 @@ namespace Talky_Client
             {
                 return;
             }
-            _connection.Writer.WriteLine("M:" + message);
-            _connection.Writer.Flush();
-            _connection.Writer.WriteLine("S:Client");
-            _connection.Writer.Flush();
-            _connection.Writer.WriteLine("S:Account");
-            _connection.Writer.Flush();
-            _connection.Writer.WriteLine("S:ChannelClientList");
-            _connection.Writer.Flush();
+            _connection.Send("M:" + message);
+            _connection.Send("S:Client");
+            _connection.Send("S:Account");
+            _connection.Send("S:ChannelClientList");
             _messageInput.Text = "";
         }
 
         private void _disconnectButton_Click(object sender, EventArgs e)
         {
-            ServerConnection.GetCurrentConnection().Client.Close();
-            _listeningThread.Abort();
-            _listeningThread = null;
-            ServerConnection.SetCurrentConnection(null);
-            ConnectForm.Instance.Show();
             Close();
         }
 
+        private void Disconnect()
+        {
+            _isRunning = false;
+            _connection?.Disconnect();
+            _listeningThread?.Join();
+        }
     }
 }

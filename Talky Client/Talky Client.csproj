@@ -91,6 +91,7 @@
     <Compile Include="ConnectForm.Designer.cs">
       <DependentUpon>ConnectForm.cs</DependentUpon>
     </Compile>
+    <Compile Include="Connection\Config.cs" />
     <Compile Include="Connection\ServerConnection.cs" />
     <Compile Include="ChatWindow.cs">
       <SubType>Form</SubType>

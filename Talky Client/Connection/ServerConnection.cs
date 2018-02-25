@@ -1,70 +1,114 @@
-﻿using System.Net.Sockets;
+﻿using System;
+using System.Net.Sockets;
 using System.IO;
 
 namespace Talky_Client.Connection
 {
-    class ServerConnection
+    public class ServerConnection : IDisposable
     {
 
-        public string Host { get; set; }
-        public int Port { get; set; }
+        public string Host { get; }
+        public int Port { get; }
         public string Username { get; set; }
-        public TcpClient Client { get; private set; }
-        public StreamReader Reader { get; private set; }
-        public StreamWriter Writer { get; private set; }
+        private TcpClient _client;
+        private StreamReader _reader;
+        private StreamWriter _writer;
 
-        private static ServerConnection _currentConnection { get; set; }
-        private static object _lock = new object();
+        private readonly Config _config;
 
-        public ServerConnection(string host, int port, string username, string password)
+
+        private static ServerConnection _currentConnection;
+        private static readonly object Lock = new object();
+
+        public ServerConnection(Config config) 
         {
-            Host = host;
-            Port = port;
-            Username = username;
+            Host = config.Hostname;
+            Port = config.Port;
+            _config = config;
             _currentConnection = this;
+            Connect();
+        }
+
+        public void Connect()
+        {
+            try
+            {
+                Disconnect();
+                _client = new TcpClient(Host, Port);
+                _reader = new StreamReader(_client.GetStream());
+                _writer = new StreamWriter(_client.GetStream());
+
+                if (_config.Password.Equals(""))
+                {
+                    Send("M:/name " + _config.UserName);
+                }
+                else
+                {
+                    Send("M:/auth " + _config.UserName + " " + _config.Password);
+                }
+
+                Send("S:Client");
+                Send("S:Account");
+                Send("S:ChannelClientList");
+            }
+            catch
+            {
+                _client = null;
+            }
+        }
+
+        public bool IsConnected()
+        {
+            lock (Lock)
+            {
+                return _currentConnection != null && _currentConnection._client.Connected;
+            }
+        }
+
+        public void Send(string msg)
+        {
+            _writer.WriteLine(msg);
+            _writer.Flush();
+        }
+
+        public void Disconnect()
+        {
+            lock (Lock)
+            {
+                try
+                {
+                    _reader?.Dispose();
+                    _writer?.Dispose();
+                    _client.Close();
+                    ((IDisposable)_client)?.Dispose();
+                    _currentConnection = null;
+                }
+                catch (Exception e)
+                {
+                    //log exceptions somewhere?
+                }
+            }
+        }
+
+        public string Read()
+        {
+            var msg = string.Empty;
 
             try
             {
-                Client = new TcpClient(host, port);
-                Reader = new StreamReader(Client.GetStream());
-                Writer = new StreamWriter(Client.GetStream());
-
-                if (password.Equals(""))
-                {
-                    Writer.WriteLine("M:/name " + username);
-                } else
-                {
-                    Writer.WriteLine("M:/auth " + username + " " + password);
-                }
-                Writer.Flush();
-
-                Writer.WriteLine("S:Client");
-                Writer.Flush();
-                Writer.WriteLine("S:Account");
-                Writer.Flush();
-                Writer.WriteLine("S:ChannelClientList");
-                Writer.Flush();
-            } catch
-            {
-                Client = null;
+                msg = _reader.ReadLine();
             }
+            catch (Exception e)
+            {
+                //todo::
+            }
+
+            return msg;
         }
 
-        public static ServerConnection GetCurrentConnection()
+        public void Dispose()
         {
-            lock (_lock)
-            {
-                return _currentConnection;
-            }
+            Disconnect();
         }
-
-        public static void SetCurrentConnection(ServerConnection connection)
-        {
-            lock (_lock)
-            {
-                _currentConnection = connection;
-            }
-        }
-
     }
 }

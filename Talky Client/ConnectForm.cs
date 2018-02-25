@@ -15,7 +15,7 @@ namespace Talky_Client
             Instance = this;
         }
 
-        private bool ValidUsername(string desiredUsername)
+        private static bool ValidUsername(string desiredUsername)
         {
             return !(string.IsNullOrEmpty(desiredUsername) || string.IsNullOrWhiteSpace(desiredUsername) || desiredUsername.Length > 16 || desiredUsername.Contains("%") || desiredUsername.Contains("/") || desiredUsername.Contains("@") || desiredUsername.Contains("\\") || desiredUsername.Contains(";"));
         }
@@ -29,8 +29,7 @@ namespace Talky_Client
         private void _connectButton_Click(object sender, EventArgs e)
         {
             string host = _hostInput.Text;
-            int port = 0;
-            bool validPort = int.TryParse(_portInput.Text, out port);
+            bool validPort = int.TryParse(_portInput.Text, out var port);
             string username = _usernameInput.Text;
 
             if (string.IsNullOrEmpty(host) || string.IsNullOrWhiteSpace(host))
@@ -57,9 +56,21 @@ namespace Talky_Client
                 password = _passwordInput.Text;
             }
 
-            ServerConnection connection = new ServerConnection(host, port, username, password);
-            new ChatWindow().Show();
-            Hide();
+            var config = new Config
+            {
+                Hostname = host,
+                Port = port,
+                UserName = username,
+                Password = password
+            };
+
+            using (var connection = new ServerConnection(config))
+            using (var chat = new ChatWindow(connection))
+            {
+                Hide();
+                chat.ShowDialog();
+            }
+            Show();
         }
 
         private void _hostInput_TextChanged(object sender, EventArgs e)
@@ -87,13 +98,7 @@ namespace Talky_Client
 
         private void _usernameInput_TextChanged(object sender, EventArgs e)
         {
-            if (!ValidUsername(_usernameInput.Text))
-            {
-                _usernameErrorImage.Visible = true;
-            } else
-            {
-                _usernameErrorImage.Visible = false;
-            }
+            _usernameErrorImage.Visible = !ValidUsername(_usernameInput.Text);
         }
 
         private void ConnectForm_FormClosing(object sender, FormClosingEventArgs e)

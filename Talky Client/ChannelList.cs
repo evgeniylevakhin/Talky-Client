@@ -6,18 +6,19 @@ namespace Talky_Client
 {
     public partial class ChannelList : Form
     {
+        private readonly string[] _channels;
+        private readonly ServerConnection _connection;
 
-        private string[] _channels;
-
-        public ChannelList(string[] channels)
+        public ChannelList(string[] channels, ServerConnection connection)
         {
             InitializeComponent();
             _channels = channels;
+            _connection = connection;
         }
 
         private void ChannelList_Load(object sender, EventArgs e)
         {
-            foreach (string channel in _channels)
+            foreach (var channel in _channels)
             {
                 _channelList.Items.Add(channel);
             }
@@ -25,16 +26,10 @@ namespace Talky_Client
 
         private void _joinButton_Click(object sender, EventArgs e)
         {
-            if (_channelList.SelectedItem != null && _channelList.SelectedItem is string)
-            {
-                ServerConnection _connection = ServerConnection.GetCurrentConnection();
-                _connection.Writer.WriteLine("M:/join " + _channelList.SelectedItem);
-                _connection.Writer.Flush();
-                _connection.Writer.WriteLine("S:Client");
-                _connection.Writer.Flush();
-                Close();
-            }
+            if (!(_channelList.SelectedItem is string)) return;
+            _connection.Send("M:/join " + _channelList.SelectedItem);
+            _connection.Send("S:Client");
+            Close();
         }
-
     }
 }
