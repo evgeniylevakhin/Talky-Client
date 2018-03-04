@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Threading;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 using Talky_Client.Connection;
 
@@ -44,6 +45,7 @@ namespace Talky_Client
                 if (!_connection.IsConnected())
                 {
                     _connection.Connect();
+                    Task.Delay(1000);
                     continue;
                 }
 

@@ -16,8 +16,6 @@ namespace Talky_Client.Connection
 
         private readonly Config _config;
 
-
-        private static ServerConnection _currentConnection;
         private static readonly object Lock = new object();
 
         public ServerConnection(Config config) 
@@ -25,7 +23,6 @@ namespace Talky_Client.Connection
             Host = config.Hostname;
             Port = config.Port;
             _config = config;
-            _currentConnection = this;
             Connect();
         }
 
@@ -61,7 +58,7 @@ namespace Talky_Client.Connection
         {
             lock (Lock)
             {
-                return _currentConnection != null && _currentConnection._client.Connected;
+                return _client != null && _client.Connected;
             }
         }
 
@@ -81,7 +78,6 @@ namespace Talky_Client.Connection
                     _writer?.Dispose();
                     _client.Close();
                     ((IDisposable)_client)?.Dispose();
-                    _currentConnection = null;
                 }
                 catch (Exception e)
                 {
